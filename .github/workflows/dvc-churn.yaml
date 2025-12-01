@@ -13,6 +13,8 @@ jobs:
 
     env:
       REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+      GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
 
     steps:
       - name: Checkout repository
@@ -33,29 +35,28 @@ jobs:
           pip install "dvc[gdrive]==3.63.0"
 
       - name: Configure DVC remote for Google Drive (OAuth user creds)
+        env:
+          GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_JSON }}
         run: |
-          # 1. Recréer le fichier d'identifiants depuis le secret GitHub
-          cat > gdrive_user_credentials.json << 'EOF'
-          ${{ secrets.GDRIVE_CREDENTIALS_JSON }}
-          EOF
+          # 1. Créer le fichier d'identifiants depuis le secret GitHub
+          echo "$GDRIVE_CREDENTIALS_DATA" > gdrive_user_credentials.json
 
           # 2. Déclarer le remote Drive
           dvc remote add -d new_gdrive gdrive://1mB_XXOO5syQJVfMNTWvJHBBzB5eIB1wS
 
-          # 3. Injecter les identifiants dans la config locale
+          # 3. Configurer les identifiants via variables d'environnement ET fichier
           dvc remote modify --local new_gdrive gdrive_user_credentials_file gdrive_user_credentials.json
-          dvc remote modify --local new_gdrive gdrive_client_id '${{ secrets.GDRIVE_CLIENT_ID }}'
-          dvc remote modify --local new_gdrive gdrive_client_secret '${{ secrets.GDRIVE_CLIENT_SECRET }}'
-
-          # Diagnostics (masquer les valeurs sensibles)
+          
+          # Diagnostics
           echo "=== DVC remotes ==="
           dvc remote list
-          echo "=== DVC local config (masked) ==="
-          cat .dvc/config.local | sed 's/client_secret = .*/client_secret = ***/' || echo "No local config file"
-          echo "=== Credentials file exists ==="
+          echo "=== Credentials file size ==="
           ls -lh gdrive_user_credentials.json
-          echo "=== Client ID length ==="
-          echo "${{ secrets.GDRIVE_CLIENT_ID }}" | wc -c
+          echo "=== Environment variables set ==="
+          echo "GDRIVE_CLIENT_ID length: $(echo -n "$GDRIVE_CLIENT_ID" | wc -c)"
+          echo "GDRIVE_CLIENT_SECRET length: $(echo -n "$GDRIVE_CLIENT_SECRET" | wc -c)"
+          echo "=== Validate JSON ==="
+          python3 -c "import json; json.load(open('gdrive_user_credentials.json'))" && echo "JSON is valid" || echo "JSON is invalid"
 
       - name: Pull data & models from DVC remote (Drive)
         run: |
