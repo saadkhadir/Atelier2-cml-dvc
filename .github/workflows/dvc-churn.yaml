@@ -38,7 +38,7 @@ jobs:
           # 1. Recréer le fichier d'identifiants depuis le secret GitHub
           echo '${{ secrets.GDRIVE_CREDENTIALS_JSON }}' > gdrive_user_credentials.json
           # 2. Injecter ces identifiants dans la configuration DVC locale
-          dvc add remote new_gdrive gdrive://1mB_XXOO5syQJVfMNTWvJHBBzB5eIB1wS
+          dvc remote add -d new_gdrive gdrive://1mB_XXOO5syQJVfMNTWvJHBBzB5eIB1wS
           dvc remote modify --local new_gdrive gdrive_user_credentials_file gdrive_user_credentials.json
           dvc remote modify --local new_gdrive gdrive_client_id "${{ secrets.GDRIVE_CLIENT_ID }}"
           dvc remote modify --local new_gdrive gdrive_client_secret "${{ secrets.GDRIVE_CLIENT_SECRET }}"
