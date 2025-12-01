@@ -31,7 +31,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install "dvc[gdrive]==3.63.0"
-          # pip install cml  # si pas inclus dans requirements.txt
 
       - name: Configure DVC remote for Google Drive (OAuth user creds)
         run: |
@@ -47,8 +46,10 @@ jobs:
           dvc remote modify --local new_gdrive gdrive_client_secret "${{ secrets.GDRIVE_CLIENT_SECRET }}"
 
           # Diagnostics
+          echo "=== DVC remotes ==="
           dvc remote list
-          dvc config --local
+          echo "=== DVC local config ==="
+          cat .dvc/config.local || echo "No local config file"
 
       - name: Pull data & models from DVC remote (Drive)
         run: |
@@ -67,7 +68,7 @@ jobs:
           dvc add data/models/ || echo "Models already tracked"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data.dvc models.dvc || true
+          git add data.dvc models.dvc .dvc/config || true
           git commit -m "Update DVC artifacts [skip ci]" || echo "Nothing to commit"
 
       - name: Push data & models to DVC remote (Drive)
@@ -77,8 +78,7 @@ jobs:
       - name: Generate and publish CML report
         run: |
           echo "## Metrics" > report.md
-          awk 'NR %4{ print "  " $0 }{ print ""}' metrics.txt >> report.md
+          awk 'NR==1 || NR%4==0 { print "  " $0 } { print "" }' metrics.txt >> report.md
           echo "## Confusion Matrix" >> report.md
           echo "![](./conf_matrix.png)" >> report.md
           cml comment create report.md
-
